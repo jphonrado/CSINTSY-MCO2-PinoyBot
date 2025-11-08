@@ -3,16 +3,64 @@ pinoybot.py
 
 PinoyBot: Filipino Code-Switched Language Identifier
 
-This module provides the main tagging function for the PinoyBot project, which identifies the language of each word in a code-switched Filipino-English text. The function is designed to be called with a list of tokens and returns a list of tags ("ENG", "FIL", or "OTH").
+This module provides the main tagging function for the PinoyBot project, which identifies 
+the language of each word in a code-switched Filipino-English text. The function is designed 
+to be called with a list of tokens and returns a list of tags ("ENG", "FIL", or "OTH").
 
-Model training and feature extraction should be implemented in a separate script. The trained model should be saved and loaded here for prediction.
+Model training and feature extraction are implemented in separate scripts. 
+The trained model and encoders are loaded here for prediction.
 """
 
-import os
 import pickle
+import pandas as pd
 from typing import List
 
-# Main tagging function
+# ===============================
+# Load trained model and encoders
+# ===============================
+with open("trained_model.pkl", "rb") as f:
+    model = pickle.load(f)
+with open("feature_encoder.pkl", "rb") as f:
+    feature_encoder = pickle.load(f)
+with open("label_encoder.pkl", "rb") as f:
+    label_encoder = pickle.load(f)
+
+
+# ===============================
+# Feature Extraction Function
+# ===============================
+def extract_features(word):
+    """Extracts linguistic and orthographic features from a given word."""
+    w = str(word).lower()
+
+    # Filipino prefixes
+    prefixes = ("mag", "nag", "ma", "na", "ka", "pa", "pag", "mang", "pang", "pala", "i")
+    x1 = "Yes" if w.startswith(prefixes) else "No"
+
+    # Ends with vowel
+    x2 = "Yes" if w.endswith(("a", "e", "i", "o", "u")) else "No"
+
+    # Contains English clusters
+    x3 = "Yes" if any(cl in w for cl in ["th", "sh", "ch", "ph", "tion", "ous", "ment"]) else "No"
+
+    # Contains the letter 'c'
+    x4 = "Yes" if "c" in w else "No"
+
+    # Word length
+    x5 = len(w)
+
+    # Starts with a capital letter
+    x6 = "Yes" if word and word[0].isupper() else "No"
+
+    # Is purely alphabetic
+    x7 = "Yes" if word.isalpha() else "No"
+
+    return [x1, x2, x3, x4, x5, x6, x7]
+
+
+# ===============================
+# Main Tagging Function
+# ===============================
 def tag_language(tokens: List[str]) -> List[str]:
     """
     Tags each token in the input list with its predicted language.
@@ -21,30 +69,28 @@ def tag_language(tokens: List[str]) -> List[str]:
     Returns:
         tags: List of predicted tags ("ENG", "FIL", or "OTH"), one per token.
     """
-    # 1. Load your trained model from disk (e.g., using pickle or joblib)
-    #    Example: with open('trained_model.pkl', 'rb') as f: model = pickle.load(f)
-    #    (Replace with your actual model loading code)
+    # 1. Extract features for each token
+    features = [extract_features(token) for token in tokens]
+    feature_df = pd.DataFrame(features, columns=["x1", "x2", "x3", "x4", "x5", "x6", "x7"])
 
-    # 2. Extract features from the input tokens to create the feature matrix
-    #    Example: features = ... (your feature extraction logic here)
+    # 2. Encode the features using the saved encoder
+    X_encoded = feature_encoder.transform(feature_df)
 
-    # 3. Use the model to predict the tags for each token
-    #    Example: predicted = model.predict(features)
+    # 3. Predict using the trained model
+    predictions = model.predict(X_encoded)
 
-    # 4. Convert the predictions to a list of strings ("ENG", "FIL", or "OTH")
-    #    Example: tags = [str(tag) for tag in predicted]
+    # 4. Decode numeric labels back to text form
+    tags = label_encoder.inverse_transform(predictions)
 
-    # 5. Return the list of tags
-    #    return tags
+    return tags.tolist()
 
-    # You can define other functions, import new libraries, or add other Python files as needed, as long as
-    # the tag_language function is retained and correctly accomplishes the expected task.
 
-    # Currently, the bot just tags every token as FIL. Replace this with your more intelligent predictions.
-    return ['FIL' for i in tokens]
-
+# ===============================
+# Example Usage
+# ===============================
 if __name__ == "__main__":
-    # Example usage
-    example_tokens = ["Love", "kita", "."]
+    example_tokens = ["Love", "kita", "the", "world", "Marcos", "nanalo", "hindi", "ako", "nakasdl;kf"]
     print("Tokens:", example_tokens)
-    tags = tag_language(example_tokens)
+    predicted_tags = tag_language(example_tokens)
+    print("Predicted tags:", predicted_tags)
+
