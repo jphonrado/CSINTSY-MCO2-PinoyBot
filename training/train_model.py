@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, classification_report
 df = pd.read_csv("training_data.csv")
 
 # 2. Separate features and labels
-X = df[["x1", "x2", "x3", "x4", "x5", "x6", "x7"]]
+X = df[["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11"]]
 y = df["label"]
 
 # 3. Encode categorical feature columns (Yes/No → 0/1, etc.)
