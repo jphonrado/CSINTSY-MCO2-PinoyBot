@@ -4,6 +4,16 @@ import re
 #Load annotated data
 df = pd.read_csv("annotated_data.csv")
 
+ENG_FUNCTION_LIST = {
+    "the","a","an","of","to","in","on","at","by","for","with","as","from",
+    "and","but","or","so","if","then","because","than",
+    "this","that","these","those","which","who","whom",
+    "is","are","was","were","be","been","being","do","does","did","not",
+    "i","you","we","they","he","she","it","me","him","her","us","them",
+    "my","your","our","their","its","there","here","when","where","why","how"
+}
+
+
 def extract_features(word): 
     w = str(word).lower()
 
@@ -63,13 +73,17 @@ def extract_features(word):
     "ist","ism","ship","ly","al","ary","ery","ed","ing"
     )
     x12 = "Yes" if any(w.endswith(s) for s in ENG_SUFFIXES) else "No"
+    
+    # function words
+    x13 = "Yes" if w in ENG_FUNCTION_LIST else "No"
 
-    return [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12]
+
+    return [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13]
 
 
 # Apply feature extraction
 features = df["word"].apply(extract_features)
-df[["x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12_eng_suffix"]] = pd.DataFrame(features.tolist(), index=df.index)
+df[["x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12_eng_suffix", "x13_eng_function"]] = pd.DataFrame(features.tolist(), index=df.index)
 
 # Clean missing or invalid labels
 df["label"] = df["label"].fillna("OTH")
@@ -79,7 +93,7 @@ df["label"] = df["label"].replace(["UNK", "unknown", "", " "], "OTH")
 df["label"] = df["label"].apply(lambda x: x if x in ["FIL", "ENG"] else "OTH")
 
 # Keep only needed columns
-processed_df = df[["word","x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12_eng_suffix","label"]]
+processed_df = df[["word","x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12_eng_suffix","x13_eng_function","label"]]
 
 # Save new training file
 processed_df.to_csv("training_data.csv", index=False)
